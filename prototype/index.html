@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CachePilot · 交互原型 v0.1</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --card2:#1d212b; --line:#262b37;
+    --text:#e8eaef; --sub:#9aa3b2;
+    --green:#34d399; --yellow:#fbbf24; --red:#f87171; --blue:#60a5fa;
+    --radius:12px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;font-size:14px;line-height:1.5}
+  .wrap{max-width:980px;margin:0 auto;padding:24px 20px 80px}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#34d399,#60a5fa);display:flex;align-items:center;justify-content:center;font-size:20px}
+  header h1{font-size:19px;font-weight:700}
+  header .tag{font-size:12px;color:var(--sub);background:var(--card2);padding:3px 10px;border-radius:20px;border:1px solid var(--line)}
+  .notice{background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.25);border-radius:var(--radius);padding:10px 14px;font-size:12.5px;color:#bcd3f5;margin-bottom:16px}
+  .bar{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;position:sticky;top:0;z-index:10}
+  .disk{flex:1}
+  .disk .row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--sub);margin-bottom:6px}
+  .disk .row b{color:var(--text)}
+  .meter{height:8px;background:var(--card2);border-radius:6px;overflow:hidden}
+  .meter i{display:block;height:100%;background:linear-gradient(90deg,#f87171,#fbbf24);border-radius:6px;transition:width .3s}
+  .btn{padding:9px 18px;border-radius:9px;border:none;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--card2);color:var(--text);border:1px solid var(--line);transition:.15s}
+  .btn.primary{background:linear-gradient(135deg,#34d399,#2dd4bf);color:#06281f;border:none}
+  .btn.primary:disabled{opacity:.4;cursor:not-allowed}
+  .btn.ghost{background:transparent;border:1px dashed var(--line);color:var(--sub)}
+  .cat{margin-bottom:18px}
+  .cat-head{display:flex;align-items:center;gap:10px;padding:10px 4px;cursor:pointer;user-select:none}
+  .cat-head .arrow{transition:.15s;color:var(--sub);font-size:11px}
+  .cat-head.open .arrow{transform:rotate(90deg)}
+  .cat-head .nm{font-weight:700;font-size:15px}
+  .cat-head .sum{font-size:12px;color:var(--sub)}
+  .cat-head .badge{margin-left:auto;font-size:12px;font-weight:700}
+  .items{display:none}
+  .cat.open .items{display:block}
+  .item{display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;margin-bottom:8px;transition:.15s}
+  .item:hover{border-color:#39404f}
+  .item.checked{border-color:rgba(52,211,153,.5);background:rgba(52,211,153,.04)}
+  .item.dim{opacity:.55}
+  .ck{width:19px;height:19px;border-radius:6px;border:1.5px solid #4b5363;margin-top:2px;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;background:var(--card2);transition:.15s}
+  .item.checked .ck{background:#34d399;border-color:#34d399;color:#06281f}
+  .item.lock .ck{cursor:not-allowed;opacity:.4}
+  .body{flex:1;min-width:0}
+  .t1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .t1 .name{font-weight:600}
+  .pill{font-size:10.5px;padding:1px 8px;border-radius:20px;border:1px solid}
+  .risk-low{color:var(--green);border-color:rgba(52,211,153,.4)}
+  .risk-med{color:var(--yellow);border-color:rgba(251,191,36,.4)}
+  .risk-high{color:var(--red);border-color:rgba(248,113,113,.4)}
+  .t2{font-size:12.5px;color:var(--sub);margin-top:5px}
+  .t3{font-size:11.5px;color:#6b7484;margin-top:4px}
+  .t3 code{background:var(--card2);padding:1px 6px;border-radius:4px;font-size:11px;color:#a8c0e8}
+  .size{flex:none;font-size:14px;font-weight:700;color:var(--text);margin-left:auto}
+  .size small{font-weight:400;color:var(--sub);font-size:11px;display:block;text-align:right}
+  footer{margin-top:22px;font-size:11.5px;color:#5b6472;text-align:center}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#111827;border:1px solid #34d399;color:#d1fae5;padding:10px 18px;border-radius:10px;font-size:13px;display:none;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">🪶</div>
+    <h1>CachePilot</h1>
+    <span class="tag">交互原型 v0.1 · 模拟数据</span>
+  </header>
+  <div class="notice">⚠️ 这是<b>模拟演示</b>（数据取自一台"典型 AI 工程师机器"，非本机），不会真的删除任何文件。目标：让你确认分组、文案、默认勾选逻辑。</div>
+
+  <div class="bar">
+    <div class="disk">
+      <div class="row"><span>磁盘 460 GB</span><span>已用 <b id="usedNow">392 GB</b> · 可用 <b id="freeNow">68 GB</b></span></div>
+      <div class="meter"><i id="meter" style="width:85%"></i></div>
+    </div>
+    <button class="btn ghost" onclick="toggleAll()">全选/全不选</button>
+    <button class="btn primary" id="cleanBtn" disabled onclick="doClean()">移入废纸篓 <span id="selSize">0 GB</span></button>
+  </div>
+
+  <div id="cats"></div>
+
+  <footer>CachePilot 原型 · 所有清理 = 移入废纸篓（可恢复）· 红色条目只展示不自动删</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ------- 模拟数据：一台典型的 AI 工程师 Mac -------
+const CATS = [
+ {id:"package-manager", icon:"📦", name:"包管理器缓存", items:[
+   {tool:"npm", name:"npm 下载缓存 _cacache", gb:3.2, risk:"low", why:"npm install 的全局包缓存，删除不影响已装依赖", cmd:"npm cache clean --force", def:true},
+   {tool:"pnpm", name:"pnpm store", gb:4.1, risk:"med", why:"硬链接存储；项目仍用 pnpm 时清了会丢去重收益", cmd:"pnpm store prune", def:false},
+   {tool:"pip", name:"pip 缓存", gb:2.1, risk:"low", why:"pip 下载的 wheel 缓存，删后重新下载", cmd:"pip cache purge", def:true},
+   {tool:"uv", name:"uv 缓存", gb:1.8, risk:"low", why:"uv 全局包缓存，不影响已建 venv", cmd:"uv cache clean", def:true},
+   {tool:"Homebrew", name:"Homebrew 缓存 + 旧版本", gb:2.4, risk:"low", why:"brew 下载缓存 + 卸载遗留旧版本", cmd:"brew cleanup --prune=all", def:true},
+   {tool:"cargo", name:"cargo registry 缓存", gb:1.1, risk:"low", why:"crates.io 下载缓存，可重建", cmd:"cargo clean", def:true},
+   {tool:"gradle", name:"gradle 构建缓存", gb:2.8, risk:"med", why:"Android/Java 构建缓存；清后下次构建变慢", cmd:"手动删 ~/.gradle/caches", def:false},
+ ]},
+ {id:"ai-tools", icon:"🤖", name:"AI 工具残留", items:[
+   {tool:"ollama", name:"ollama 模型（qwen3:32b 等 6 个）", gb:28.4, risk:"high", why:"本地大模型；删除需重新下载，仅展示占用与模型清单", cmd:"ollama rm <model>", def:false, showOnly:true, sub:"qwen3:32b 18.2G · llama3.1:8b 4.9G · nomic-embed 0.3G …"},
+   {tool:"HuggingFace", name:"HF hub 缓存", gb:12.3, risk:"med", why:"HF 下载的模型/数据集缓存；确认不用可清", cmd:"手动清理 ~/.cache/huggingface", def:false},
+   {tool:"ComfyUI", name:"ComfyUI 临时文件", gb:1.6, risk:"med", why:"运行临时文件；output 作品目录绝不自动动", cmd:"手动清理 temp", def:false},
+ ]},
+ {id:"container", icon:"🐳", name:"容器与虚拟化", items:[
+   {tool:"Docker", name:"Docker 悬空镜像 + 构建缓存", gb:9.8, risk:"med", why:"dangling 镜像与 BuildKit 缓存；保留在用容器/镜像", cmd:"docker system prune", def:false, sub:"容器 3 个在用 · 镜像 12 个 · 悬空镜像 ~7G"},
+   {tool:"Docker", name:"Docker 停止的容器 + 日志", gb:2.2, risk:"med", why:"已停止容器与滚动日志", cmd:"docker container prune", def:false},
+ ]},
+ {id:"browser", icon:"🌐", name:"浏览器自动化", items:[
+   {tool:"Playwright", name:"Playwright 浏览器引擎", gb:1.4, risk:"low", why:"自动化测试下载的 chromium/firefox/webkit", cmd:"npx playwright uninstall", def:true},
+   {tool:"camoufox", name:"camoufox 浏览器", gb:0.8, risk:"low", why:"反检测浏览器缓存，可重装", cmd:"重装", def:true},
+ ]},
+ {id:"build", icon:"🔨", name:"工程构建产物", items:[
+   {tool:"Xcode", name:"Xcode DerivedData", gb:6.2, risk:"low", why:"编译中间产物，删后重新编译", cmd:"xcodebuild clean", def:true},
+   {tool:"node_modules", name:"node_modules 汇总（87 个项目）", gb:8.5, risk:"med", why:"仅统计展示；删除需确认项目不再用", cmd:"按项目清理", def:false, showOnly:true, sub:"ai-web 1.8G · hermes-ui 1.2G · legacy-app 0.9G …"},
+ ]},
+ {id:"app", icon:"🎬", name:"应用缓存(白名单)", items:[
+   {tool:"剪映", name:"剪映素材缓存", gb:3.1, risk:"low", why:"预览/素材缓存；草稿在 Projects 不受影响", cmd:"剪映设置内清理", def:true},
+   {tool:"微信开发者工具", name:"开发者工具缓存", gb:1.2, risk:"low", why:"IDE 缓存，重建即可", cmd:"工具内清理", def:true},
+ ]},
+];
+const RISK = {low:"🟢 低", med:"🟡 中", high:"🔴 高"};
+let diskUsed = 392; // 模拟 GB
+let totalRecover = 0; // 累计"已清理"
+const fmt = g => { const r = Math.round(g*10)/10; return Number.isInteger(r) ? r : r.toFixed(1); };
+
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function catSum(cat){return cat.items.reduce((a,i)=>a+(i.def&&!i.showOnly?i.gb:0),0)}
+
+function render(){
+  const root = document.getElementById("cats");
+  root.innerHTML = CATS.map((cat,i)=>{
+    const sum = catSum(cat);
+    return `<div class="cat ${i===0?"open":""}" id="cat-${cat.id}">
+      <div class="cat-head" onclick="document.getElementById('cat-${cat.id}').classList.toggle('open')">
+        <span class="arrow">▶</span><span class="nm">${cat.icon} ${cat.name}</span>
+        <span class="badge" style="color:${sum>0?'#34d399':'#6b7484'}">可回收 ${fmt(sum)} GB</span>
+      </div>
+      <div class="items">${cat.items.map(it=>itemHtml(cat.id,it)).join("")}</div>
+    </div>`;
+  }).join("");
+}
+function itemHtml(catId,it){
+  const lock = it.showOnly;
+  const checked = it.def && !lock;
+  const cls = checked?"checked":"";
+  const sub = it.sub?`<div class="t3">${esc(it.sub)}</div>`:"";
+  return `<div class="item ${cls}" id="it-${catId}-${it.tool.replace(/\W/g,'')}" data-gb="${it.gb}" data-cat="${catId}" data-def="${it.def||false}" data-lock="${lock||false}">
+    <div class="ck" onclick="toggle(this)">${checked?"✓":""}</div>
+    <div class="body">
+      <div class="t1"><span class="name">${esc(it.name)}</span><span class="pill risk-${it.risk==='low'?'low':it.risk==='med'?'med':'high'}">${RISK[it.risk]}</span>${lock?'<span class="pill" style="color:#f87171;border-color:rgba(248,113,113,.4)">仅展示</span>':''}</div>
+      <div class="t2">${esc(it.why)}</div>
+      <div class="t3">官方命令：<code>${esc(it.cmd)}</code></div>
+      ${sub}
+    </div>
+    <div class="size">${fmt(it.gb)} GB<small>${lock?"不可一键清":"可恢复"}</small></div>
+  </div>`;
+}
+function toggle(el){
+  const item = el.closest(".item");
+  if(item.dataset.lock==="true") return;
+  item.classList.toggle("checked");
+  const checked = item.classList.contains("checked");
+  el.textContent = checked?"✓":"";
+  updateBar();
+}
+function toggleAll(){
+  const want = !document.querySelector(".cat .item:not(.checked):not([data-lock=true])");
+  document.querySelectorAll(".item").forEach(item=>{
+    if(item.dataset.lock==="true") return;
+    if(want) item.classList.add("checked"), item.querySelector(".ck").textContent="✓";
+    else item.classList.remove("checked"), item.querySelector(".ck").textContent="";
+  });
+  updateBar();
+}
+function updateBar(){
+  let sel=0, n=0;
+  document.querySelectorAll(".item.checked").forEach(item=>{sel+=parseFloat(item.dataset.gb); n++;});
+  const btn = document.getElementById("cleanBtn");
+  btn.disabled = n===0;
+  btn.querySelector("span").textContent = fmt(sel)+" GB";
+  if(n===0) btn.textContent=""; // noop
+}
+function doClean(){
+  let sel=0;
+  document.querySelectorAll(".item.checked").forEach(item=>{
+    sel+=parseFloat(item.dataset.gb);
+    item.classList.add("dim"); item.classList.remove("checked");
+    item.querySelector(".ck").textContent="✓"; item.querySelector(".ck").style.opacity=".3";
+  });
+  diskUsed -= sel; totalRecover += sel;
+  const pct = Math.max(15, Math.round((diskUsed/460)*100));
+  document.getElementById("meter").style.width = pct+"%";
+  document.getElementById("usedNow").textContent = fmt(diskUsed)+" GB";
+  document.getElementById("freeNow").textContent = fmt(460-diskUsed)+" GB";
+  showToast(`✅ 已移入废纸篓 ${fmt(sel)} GB（可在废纸篓恢复）。本机累计回收 ${fmt(totalRecover)} GB`);
+  updateBar();
+  document.querySelectorAll(".cat").forEach(c=>{const s=c.querySelectorAll(".item:not(.dim)[data-lock!=true][data-def=true]").length;});
+}
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.style.display="block";
+  setTimeout(()=>t.style.display="none",3600);
+}
+render(); updateBar();
+</script>
+</body>
+</html>
