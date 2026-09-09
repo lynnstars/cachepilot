@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# 构建产物（可再生）
+app/build/
+
+# 本机扫描样例（含真实路径，不入库）
+samples/
+
+# Python
+__pycache__/
+*.pyc
+
+# 日志/临时
+*.log
+.tmp/

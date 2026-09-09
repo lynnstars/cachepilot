@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><title>CachePilot · B/C 类清理清单（等你确认）</title>
+<style>
+ body{font-family:-apple-system,"PingFang SC",sans-serif;background:#0f1115;color:#e8eaef;margin:0;padding:24px;line-height:1.5}
+ .wrap{max-width:900px;margin:0 auto}
+ h1{font-size:20px} h2{font-size:16px;margin-top:28px}
+ .note{background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.25);border-radius:10px;padding:10px 14px;font-size:13px;color:#bcd3f5;margin-bottom:16px}
+ table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+ th,td{border:1px solid #262b37;padding:8px 10px;text-align:left;vertical-align:top}
+ th{background:#1d212b;font-weight:600}
+ .sz{white-space:nowrap;font-weight:600;color:#fbbf24;text-align:right}
+ .p{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#a8c0e8;word-break:break-all}
+ .g{color:#34d399;font-weight:600}.y{color:#fbbf24}.r{color:#f87171}
+ .sum{font-size:13px;margin-top:12px;color:#9aa3b2}
+ .sum b{color:#34d399}
+ .chk{display:inline-block;width:16px;height:16px;border:1.5px solid #4b5363;border-radius:4px;margin-right:6px;vertical-align:-2px}
+</style>
+</head>
+<body><div class="wrap">
+<h1>🧹 B/C 类清理清单 <span style="font-size:13px;color:#9aa3b2">（2026-09-09 现状核对 · 等你确认后执行，一律先移入废纸篓可恢复）</span></h1>
+<div class="note">✅ 你授权的范围：B（安装包/工具包）+ C（重复/版本冗余）。<b>工作文档（pptx/docx/xlsx/csv 等）我不主动建议删</b>，C 里只列"明显版本冗余"供你选。<br>回我格式：直接说"B 全清 / C 清 1、3 / 保留 2" 之类的编号即可。</div>
+
+<h2>🟡 B 类：安装包 / 工具包 / 录屏（非工作文档）</h2>
+<table>
+<tr><th>#</th><th>大小</th><th>路径</th><th>说明</th><th>我的建议</th></tr>
+<tr><td>B1</td><td class="sz">765 MB</td><td class="p">~/Downloads/AI中台+智能体平台讲解/</td><td>两段会议录屏 mp4（AI中台讲解 496M + 智能体平台讲解 268M），看完可删</td><td class="g">建议清</td></tr>
+<tr><td>B2</td><td class="sz">295 MB</td><td class="p">~/Downloads/osql-plugin-intellij/</td><td>IntelliJ 的 ODPS/SQL 插件目录（已解压）</td><td class="y">不用可清</td></tr>
+<tr><td>B3</td><td class="sz">73 MB</td><td class="p">~/Downloads/odpscmd_public/</td><td>MaxCompute 命令行工具（已解压）</td><td class="y">不用可清</td></tr>
+<tr><td>B4</td><td class="sz">65 MB</td><td class="p">~/Downloads/data.zip</td><td>压缩包；原 data/ 目录已不在，疑似导出残留</td><td class="g">建议清</td></tr>
+<tr><td>B5</td><td class="sz">47 MB</td><td class="p">~/Downloads/feishu-backup/</td><td>飞书导出备份目录，内容请自行扫一眼</td><td class="y">确认后清</td></tr>
+</table>
+<div class="sum">B 类合计 ≈ <b>1.25 GB</b></div>
+
+<h2>🟠 C 类：重复 / 版本冗余（需要你指定保留哪份）</h2>
+<table>
+<tr><th>#</th><th>大小</th><th>路径</th><th>说明</th><th>我的建议</th></tr>
+<tr><td>C1</td><td class="sz">1.5 GB</td><td class="p">Documents/Obsidian Vault/B2C电商业务部-创新产品线_backup.zip</td><td>与 C2 目录内容重复的压缩档。若目录在用，zip 是纯冗余</td><td class="g">留目录删 zip</td></tr>
+<tr><td>C2</td><td class="sz">1.5 GB</td><td class="p">Documents/Obsidian Vault/B2C电商业务部-创新产品线_backup/</td><td>旧知识库备份目录（含 boxgt* 附件）。问：这个旧库你还需要吗？</td><td class="r">需你确认：整个移外置盘 or 保留</td></tr>
+<tr><td>C3</td><td class="sz">777 MB</td><td class="p">~/Movies/AI大赛视频-20260421/</td><td>AI 大赛视频最早期目录，内含多个嵌套版本（20260427/竖版/最终版等）</td><td class="y">确认最终版后清</td></tr>
+<tr><td>C4</td><td class="sz">175 MB</td><td class="p">~/Movies/AI大赛视频-最新(1)/</td><td rowspan="4">以下 4 个都是"最新/有/无字幕"版本目录，大概率只留 1 个最终版即可<br>（另有 最终版 175M 在其中某目录内）</td><td class="y">确认保留哪份</td></tr>
+<tr><td>C5</td><td class="sz">175 MB</td><td class="p">~/Movies/AI大赛视频-最新(1)(1)/</td><td class="y">同上</td></tr>
+<tr><td>C6</td><td class="sz">174 MB</td><td class="p">~/Movies/AI大赛视频-无字幕/</td><td class="y">同上</td></tr>
+<tr><td>C7</td><td class="sz">175 MB</td><td class="p">~/Movies/AI大赛视频-有字幕/</td><td class="y">同上</td></tr>
+<tr><td>C8</td><td class="sz">356 MB</td><td class="p">~/Downloads/昆仑网电…详设-内审优化版-功能模块方案分册2-20260303.docx</td><td>工作文档版本：Documents/昆仑网电/详细方案设计报告 里已有更新的 数信部评审版-20260308（359M）。若评审版是最终版，Downloads 这份旧版可清</td><td class="r">工作文档，你定</td></tr>
+<tr><td>C9</td><td class="sz">110 MB</td><td class="p">~/Downloads/result_model.csv</td><td>数据分析导出结果（模型结果表？）</td><td class="r">工作数据，你定</td></tr>
+</table>
+<div class="sum">C 类候选合计 ≈ <b>4.9 GB</b>（若 C2 也移走则共 6.4 GB）</div>
+
+<h2 style="color:#9aa3b2">不动项（说明）</h2>
+<table>
+<tr><th>项</th><th>原因</th></tr>
+<tr><td class="p">~/Movies/JianyingPro/User Data/Projects/ 1.6G</td><td>剪映草稿=你的作品工程，虽含重复素材但删除风险高，未列入</td></tr>
+<tr><td class="p">~/Downloads/微信掌纹支付/ 27M、各种 csv/xlsx/pdf</td><td>疑似工作/业务数据，不主动动</td></tr>
+<tr><td class="p">~/Desktop/teslamate_backup.sql 87M 等</td><td>项目备份类，需你单独说才动</td></tr>
+</table>
+</div></body></html>
