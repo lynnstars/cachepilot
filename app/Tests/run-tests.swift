@@ -366,4 +366,6 @@ if !failures.isEmpty {
     for f in failures { print("  ✗ \(f)") }
 }
 print(String(repeating: "=", count: 60))
+// exit() 不会执行 defer，必须显式清掉沙箱（否则每次跑测试都留一个目录）
+try? FileManager.default.removeItem(at: sandbox)
 exit(failed == 0 ? 0 : 1)

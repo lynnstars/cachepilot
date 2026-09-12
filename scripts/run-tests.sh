@@ -16,7 +16,7 @@ banner "CachePilot test suite"
 # ─────────────────────────────────────────────────────────────
 echo
 echo "▶ 1/3 Swift unit tests"
-# 测试崩溃(kill -6/fatalError)时 defer 不会执行 → 先清掉本套测试自己命名空间里的残留沙箱
+# 保险：先清掉本套测试自己命名空间里的残留沙箱（测试文件结尾已显式清理；崩溃时兜底）
 rm -rf "$HOME/Library/Caches/CachePilotTests-"* 2>/dev/null
 # swiftc 只允许名为 main.swift 的文件带顶层代码 → 复制一份再编译
 mkdir -p app/build
