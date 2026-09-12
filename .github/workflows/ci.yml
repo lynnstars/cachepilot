@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          swiftc --version
+          python3 --version
+
+      - name: Full test suite (Swift unit + CLI end-to-end + Python)
+        run: bash scripts/run-tests.sh
+
+      - name: Build app bundle
+        run: bash app/scripts/make-app.sh
+
+      - name: Verify signature seals Info.plist
+        run: |
+          codesign -dv app/build/CachePilot.app 2>&1 | tee /tmp/sig.txt
+          if grep -q "Info.plist=not bound" /tmp/sig.txt; then
+            echo "::error::Info.plist is not sealed by the signature"; exit 1
+          fi
+
+      - name: Verify the CLI runs and reports its version
+        run: app/build/bin/cachepilot version

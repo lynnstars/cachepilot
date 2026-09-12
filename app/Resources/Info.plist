@@ -7,15 +7,22 @@
     <key>CFBundleDisplayName</key>
     <string>CachePilot</string>
     <key>CFBundleIdentifier</key>
-    <string>com.cachepilot.app</string>
+    <string>__BUNDLE_ID__</string>
     <key>CFBundleVersion</key>
-    <string>0.1.0</string>
+    <string>__VERSION__</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>__VERSION__</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleExecutable</key>
     <string>CachePilot</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>zh-Hans</string>
+    </array>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSApplicationCategoryType</key>
@@ -23,6 +30,6 @@
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSHumanReadableCopyright</key>
-    <string>CachePilot — 面向 AI 工程师的磁盘清理工具</string>
+    <string>CachePilot — disk reclaimer for AI/dev machines. Interface language follows the system language (Chinese for zh*, English otherwise).</string>
 </dict>
 </plist>

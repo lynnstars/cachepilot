@@ -1,145 +1,271 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "categories": {
-    "package-manager": "包管理器缓存",
-    "ai-tools": "AI 工具残留",
-    "browser-automation": "浏览器自动化",
-    "build-artifacts": "工程构建产物",
-    "app-caches": "应用缓存(白名单)",
-    "general": "通用清理"
+    "package-manager": {
+      "en": "Package manager caches",
+      "zh": "包管理器缓存"
+    },
+    "ai-tools": {
+      "en": "AI tool residue",
+      "zh": "AI 工具残留"
+    },
+    "containers": {
+      "en": "Containers & virtualization",
+      "zh": "容器与虚拟化"
+    },
+    "browser-automation": {
+      "en": "Browser automation",
+      "zh": "浏览器自动化"
+    },
+    "build-artifacts": {
+      "en": "Build artifacts",
+      "zh": "工程构建产物"
+    },
+    "app-caches": {
+      "en": "App caches (whitelisted)",
+      "zh": "应用缓存（白名单）"
+    },
+    "general": {
+      "en": "General",
+      "zh": "通用"
+    }
   },
   "rules": [
     {
       "id": "npm-cacache",
       "category": "package-manager",
       "tool": "npm",
-      "name": "npm 下载缓存 _cacache",
+      "name": {
+        "en": "npm download cache (_cacache / _npx)",
+        "zh": "npm 下载缓存（_cacache / _npx）"
+      },
       "risk": "low",
-      "paths": ["~/.npm/_cacache", "~/.npm/_logs"],
+      "paths": ["~/.npm/_cacache", "~/.npm/_npx", "~/.npm/_logs"],
       "min_size_mb": 50,
-      "why": "npm install 的全局包缓存，删除不影响已安装依赖，下次 install 重新命中/下载",
-      "official_cmd": "npm cache clean --force",
+      "why": {
+        "en": "Global package cache plus packages fetched on demand by npx. Deleting never touches installed dependencies; npm re-downloads on next use. _npx is usually the larger one.",
+        "zh": "全局包缓存，以及 npx 按需拉取的包。删除不影响已安装依赖，下次使用时重新下载。_npx 往往是更大的那一块。"
+      },
+      "official_cmd": {
+        "en": "npm cache clean --force",
+        "zh": "npm cache clean --force"
+      },
       "default_clean": true
     },
     {
       "id": "pnpm-store",
       "category": "package-manager",
       "tool": "pnpm",
-      "name": "pnpm 全局 store",
-      "risk": "low",
-      "paths": ["~/Library/Caches/pnpm", "~/.pnpm-store"],
+      "name": {
+        "en": "pnpm global store",
+        "zh": "pnpm 全局 store"
+      },
+      "risk": "medium",
+      "paths": ["~/Library/pnpm/store", "~/Library/Caches/pnpm", "~/.pnpm-store"],
       "min_size_mb": 100,
-      "why": "pnpm 硬链接存储的包缓存；若项目还在用 pnpm 不建议清(会丢硬链接节省)，此处仅预览",
-      "official_cmd": "pnpm store prune",
+      "why": {
+        "en": "pnpm keeps hard-linked package content here (macOS default: ~/Library/pnpm/store). If projects still use pnpm, pruning breaks their hard links and speeds suffer; safer to run `pnpm store prune`, which only removes unreferenced packages.",
+        "zh": "pnpm 用硬链接存放包内容（macOS 默认在 ~/Library/pnpm/store）。如果还有项目在用 pnpm，整个清掉会破坏硬链接、下次安装变慢；更稳妥的是 `pnpm store prune`，只清理已无引用的包。"
+      },
+      "official_cmd": {
+        "en": "pnpm store prune",
+        "zh": "pnpm store prune"
+      },
       "default_clean": false
     },
     {
       "id": "yarn-cache",
       "category": "package-manager",
-      "tool": "yarn",
-      "name": "Yarn 缓存",
+      "tool": "Yarn",
+      "name": {
+        "en": "Yarn cache",
+        "zh": "Yarn 缓存"
+      },
       "risk": "low",
       "paths": ["~/Library/Caches/Yarn"],
       "min_size_mb": 50,
-      "why": "Yarn 下载的包缓存，可重建",
-      "official_cmd": "yarn cache clean",
+      "why": {
+        "en": "Downloaded package tarballs; rebuilt on the next install.",
+        "zh": "下载过的包压缩文件，下次安装会自动重建。"
+      },
+      "official_cmd": {
+        "en": "yarn cache clean",
+        "zh": "yarn cache clean"
+      },
       "default_clean": true
     },
     {
       "id": "pip-cache",
       "category": "package-manager",
       "tool": "pip",
-      "name": "pip 缓存",
+      "name": {
+        "en": "pip cache",
+        "zh": "pip 缓存"
+      },
       "risk": "low",
       "paths": ["~/Library/Caches/pip"],
-      "min_size_mb": 50,
-      "why": "pip 下载的 wheel 缓存，删除后 pip install 重新下载",
-      "official_cmd": "pip cache purge",
+      "min_size_mb": 30,
+      "why": {
+        "en": "Wheel cache from pip install; re-downloaded when needed.",
+        "zh": "pip install 下载的 wheel 缓存，需要时重新下载。"
+      },
+      "official_cmd": {
+        "en": "pip cache purge",
+        "zh": "pip cache purge"
+      },
       "default_clean": true
     },
     {
       "id": "uv-cache",
       "category": "package-manager",
       "tool": "uv",
-      "name": "uv 缓存",
+      "name": {
+        "en": "uv cache",
+        "zh": "uv 缓存"
+      },
       "risk": "low",
       "paths": ["~/.cache/uv"],
       "min_size_mb": 100,
-      "why": "uv 的全局包缓存，删除后重建；不影响已建 venv",
-      "official_cmd": "uv cache clean",
+      "why": {
+        "en": "uv's global package cache. Existing virtualenvs keep working; uv re-downloads later.",
+        "zh": "uv 的全局包缓存。已建好的虚拟环境不受影响，之后会自动重新下载。"
+      },
+      "official_cmd": {
+        "en": "uv cache clean",
+        "zh": "uv cache clean"
+      },
       "default_clean": true
     },
     {
       "id": "brew-cache",
       "category": "package-manager",
       "tool": "Homebrew",
-      "name": "Homebrew 下载缓存",
+      "name": {
+        "en": "Homebrew downloads & old versions",
+        "zh": "Homebrew 下载缓存与旧版本"
+      },
       "risk": "low",
       "paths": ["~/Library/Caches/Homebrew"],
       "min_size_mb": 50,
-      "why": "brew 下载的安装包缓存，删除后重装会重新下载",
-      "official_cmd": "brew cleanup --prune=all",
+      "why": {
+        "en": "Bottles and tarballs Homebrew downloaded. `brew cleanup` also removes old versions left behind by upgrades.",
+        "zh": "Homebrew 下载过的 bottle / 源码包。`brew cleanup` 还会顺手清理升级后遗留的旧版本。"
+      },
+      "official_cmd": {
+        "en": "brew cleanup --prune=all (dry run: brew cleanup -n)",
+        "zh": "brew cleanup --prune=all（先看 dry-run：brew cleanup -n）"
+      },
       "default_clean": true
-    },
-    {
-      "id": "brew-old-versions",
-      "category": "package-manager",
-      "tool": "Homebrew",
-      "name": "Homebrew 旧版本(需先 dry-run)",
-      "risk": "medium",
-      "paths": [],
-      "dynamic": "brew cleanup -n",
-      "min_size_mb": 200,
-      "why": "brew 卸载后遗留的旧版本/旧瓶；先用 dry-run 看可清多少",
-      "official_cmd": "brew cleanup",
-      "default_clean": false
     },
     {
       "id": "cargo-registry",
       "category": "package-manager",
       "tool": "cargo",
-      "name": "cargo registry 缓存",
+      "name": {
+        "en": "cargo registry cache",
+        "zh": "cargo registry 缓存"
+      },
       "risk": "low",
-      "paths": ["~/.cargo/registry"],
+      "paths": ["~/.cargo/registry/cache", "~/.cargo/registry/src"],
       "min_size_mb": 100,
-      "why": "crates.io 下载缓存，删除后下次 build 重新拉取",
-      "official_cmd": "cargo cache 或手动清 registry/cache",
+      "why": {
+        "en": "Crates downloaded from crates.io; the next build fetches them again.",
+        "zh": "从 crates.io 下载的 crate，下次构建会重新拉取。"
+      },
+      "official_cmd": {
+        "en": "cargo install cargo-cache && cargo cache -a",
+        "zh": "cargo install cargo-cache && cargo cache -a"
+      },
       "default_clean": true
     },
     {
       "id": "go-mod-cache",
       "category": "package-manager",
-      "tool": "go",
-      "name": "go module 缓存",
+      "tool": "Go",
+      "name": {
+        "en": "Go module cache",
+        "zh": "Go module 缓存"
+      },
       "risk": "low",
       "paths": ["~/go/pkg/mod/cache"],
       "min_size_mb": 100,
-      "why": "go mod download 的模块缓存，删除后重新下载",
-      "official_cmd": "go clean -modcache",
+      "why": {
+        "en": "Downloaded module zips and extracted sources; re-fetched on demand.",
+        "zh": "下载的模块压缩包与解压源码，需要时重新拉取。"
+      },
+      "official_cmd": {
+        "en": "go clean -modcache",
+        "zh": "go clean -modcache"
+      },
       "default_clean": true
     },
     {
       "id": "gradle-caches",
       "category": "package-manager",
-      "tool": "gradle",
-      "name": "gradle 构建缓存",
+      "tool": "Gradle",
+      "name": {
+        "en": "Gradle build & dependency cache",
+        "zh": "Gradle 构建与依赖缓存"
+      },
       "risk": "medium",
       "paths": ["~/.gradle/caches"],
       "min_size_mb": 200,
-      "why": "gradle 依赖+构建缓存；清后下次构建变慢需重下依赖",
-      "official_cmd": "手动删除 ~/.gradle/caches",
+      "why": {
+        "en": "Dependencies plus build caches. Your projects keep working, but the next build re-downloads and recompiles — noticeably slower.",
+        "zh": "依赖与构建缓存。项目不会坏，但下次构建需要重新下载与编译，会明显变慢。"
+      },
+      "official_cmd": {
+        "en": "./gradlew --stop, then delete ~/.gradle/caches",
+        "zh": "先 ./gradlew --stop，再删除 ~/.gradle/caches"
+      },
       "default_clean": false
+    },
+    {
+      "id": "conda-pkgs",
+      "category": "package-manager",
+      "tool": "conda",
+      "name": {
+        "en": "conda package cache",
+        "zh": "conda 包缓存"
+      },
+      "risk": "low",
+      "paths": [
+        "~/miniconda3/pkgs",
+        "~/anaconda3/pkgs",
+        "~/miniforge3/pkgs",
+        "~/mambaforge/pkgs",
+        "~/opt/miniconda3/pkgs"
+      ],
+      "min_size_mb": 200,
+      "why": {
+        "en": "Extracted package tarballs used to build conda envs. Envs themselves stay intact; future installs re-download what they need.",
+        "zh": "用于构建 conda 环境的解压包。已有环境不受影响，之后安装需要时再下载。"
+      },
+      "official_cmd": {
+        "en": "conda clean --all",
+        "zh": "conda clean --all"
+      },
+      "default_clean": true
     },
     {
       "id": "ollama-models",
       "category": "ai-tools",
       "tool": "ollama",
-      "name": "ollama 模型(展示不删)",
+      "name": {
+        "en": "ollama models (display only)",
+        "zh": "ollama 本地模型（仅展示）"
+      },
       "risk": "high",
       "paths": ["~/.ollama/models/blobs"],
       "min_size_mb": 100,
-      "why": "本地大模型文件，删了要重新下载；此条目仅展示占用，如需删请在 ollama 内 rm 或确认后单独处理",
-      "official_cmd": "ollama list / ollama rm <model>",
+      "why": {
+        "en": "Local model weights. Deleting means re-downloading gigabytes, so CachePilot only shows the footprint. Use `ollama list` to see which models you actually still use, then `ollama rm <model>`.",
+        "zh": "本地模型权重文件。删掉要重新下载几个 GB，所以这里只展示占用。用 `ollama list` 看看哪些模型还在用，再用 `ollama rm <模型名>` 精确删除。"
+      },
+      "official_cmd": {
+        "en": "ollama list / ollama rm <model>",
+        "zh": "ollama list / ollama rm <模型名>"
+      },
       "default_clean": false,
       "show_only": true
     },
@@ -147,97 +273,237 @@
       "id": "hf-cache",
       "category": "ai-tools",
       "tool": "HuggingFace",
-      "name": "HF hub 下载缓存",
+      "name": {
+        "en": "HuggingFace hub & datasets cache",
+        "zh": "HuggingFace 模型/数据集缓存"
+      },
       "risk": "medium",
-      "paths": ["~/.cache/huggingface/hub"],
+      "paths": ["~/.cache/huggingface/hub", "~/.cache/huggingface/datasets"],
       "min_size_mb": 200,
-      "why": "从 HF 下载的模型/数据集缓存；删除后用到时重新下载",
-      "official_cmd": "手动删除或 huggingface-cli",
+      "why": {
+        "en": "Models and datasets pulled from the Hub. They are re-downloadable, but that can be tens of GB — check which ones you still need first.",
+        "zh": "从 Hub 拉取的模型与数据集。可以重新下载，但可能几十 GB——先确认哪些还在用。"
+      },
+      "official_cmd": {
+        "en": "huggingface-cli delete-cache",
+        "zh": "huggingface-cli delete-cache"
+      },
       "default_clean": false
     },
     {
       "id": "comfyui-cache",
       "category": "ai-tools",
       "tool": "ComfyUI",
-      "name": "ComfyUI 临时缓存",
+      "name": {
+        "en": "ComfyUI temp cache",
+        "zh": "ComfyUI 临时缓存"
+      },
       "risk": "medium",
       "paths": ["~/ComfyUI/temp", "~/ComfyUI/cache"],
       "min_size_mb": 100,
-      "why": "ComfyUI 运行临时文件；output 目录是作品，绝不自动动",
-      "official_cmd": "手动清理 temp",
+      "why": {
+        "en": "Run-time temporary files. The output/ and models/ folders are your work and are never touched.",
+        "zh": "运行时临时文件。output/ 与 models/ 是你的作品和模型，绝不触碰。"
+      },
+      "official_cmd": {
+        "en": "delete the temp folder manually",
+        "zh": "手动删除 temp 目录"
+      },
       "default_clean": false
     },
     {
       "id": "insightface",
       "category": "ai-tools",
       "tool": "insightface",
-      "name": "insightface 模型缓存",
+      "name": {
+        "en": "insightface model cache",
+        "zh": "insightface 模型缓存"
+      },
       "risk": "low",
       "paths": ["~/.insightface"],
       "min_size_mb": 100,
-      "why": "人脸识别模型自动下载缓存，可重建",
-      "official_cmd": "手动删除 ~/.insightface",
+      "why": {
+        "en": "Face-analysis models auto-downloaded on first use; re-downloaded automatically.",
+        "zh": "首次使用时自动下载的人脸分析模型，删掉后会自动重新下载。"
+      },
+      "official_cmd": {
+        "en": "delete ~/.insightface manually",
+        "zh": "手动删除 ~/.insightface"
+      },
       "default_clean": true
+    },
+    {
+      "id": "docker-desktop",
+      "category": "containers",
+      "tool": "Docker",
+      "name": {
+        "en": "Docker Desktop disk image (display only)",
+        "zh": "Docker Desktop 磁盘映像（仅展示）"
+      },
+      "risk": "medium",
+      "paths": ["~/Library/Containers/com.docker.docker/Data/vms/0/data/Docker.raw"],
+      "min_size_mb": 500,
+      "why": {
+        "en": "Docker keeps images, containers and build cache inside this disk image. Moving the file would break Docker, so CachePilot only reports it. Prune inside Docker instead: dangling images and build cache are usually the biggest part.",
+        "zh": "镜像、容器与构建缓存都在这个磁盘映像里。移动文件会弄坏 Docker，所以只报占用。请在 Docker 内部清理：悬空镜像与构建缓存通常是最大头。"
+      },
+      "official_cmd": {
+        "en": "docker system prune -a --volumes, then shrink the disk image in Docker Desktop → Settings → Resources",
+        "zh": "docker system prune -a --volumes，然后在 Docker Desktop → Settings → Resources 里收缩磁盘映像"
+      },
+      "default_clean": false,
+      "show_only": true
     },
     {
       "id": "playwright-browsers",
       "category": "browser-automation",
       "tool": "Playwright",
-      "name": "Playwright 浏览器引擎",
+      "name": {
+        "en": "Playwright browser engines",
+        "zh": "Playwright 浏览器引擎"
+      },
       "risk": "low",
       "paths": ["~/Library/Caches/ms-playwright"],
       "min_size_mb": 100,
-      "why": "自动化测试下载的浏览器，删除后 playwright install 重装",
-      "official_cmd": "npx playwright uninstall",
+      "why": {
+        "en": "Chromium/Firefox/WebKit builds downloaded for automation; re-installed with one command.",
+        "zh": "自动化测试下载的 Chromium/Firefox/WebKit，装回来只需一条命令。"
+      },
+      "official_cmd": {
+        "en": "npx playwright uninstall (reinstall: npx playwright install)",
+        "zh": "npx playwright uninstall（重装：npx playwright install）"
+      },
       "default_clean": true
     },
     {
       "id": "camoufox",
       "category": "browser-automation",
       "tool": "camoufox",
-      "name": "camoufox 浏览器",
+      "name": {
+        "en": "camoufox browser",
+        "zh": "camoufox 浏览器"
+      },
       "risk": "low",
       "paths": ["~/Library/Caches/camoufox"],
       "min_size_mb": 100,
-      "why": "反检测浏览器缓存，可重装",
-      "official_cmd": "重装即可",
+      "why": {
+        "en": "Anti-detection browser build; re-fetched by camoufox's installer.",
+        "zh": "反检测浏览器文件，重装 camoufox 时会重新下载。"
+      },
+      "official_cmd": {
+        "en": "camoufox fetch",
+        "zh": "camoufox fetch"
+      },
       "default_clean": true
     },
     {
       "id": "derived-data",
       "category": "build-artifacts",
       "tool": "Xcode",
-      "name": "Xcode DerivedData",
+      "name": {
+        "en": "Xcode DerivedData",
+        "zh": "Xcode DerivedData"
+      },
       "risk": "low",
       "paths": ["~/Library/Developer/Xcode/DerivedData"],
       "min_size_mb": 200,
-      "why": "Xcode 编译中间产物，删除后重新编译即可",
-      "official_cmd": "xcodebuild clean / 手动删除",
+      "why": {
+        "en": "Intermediate build products; Xcode rebuilds them (slower first build).",
+        "zh": "编译中间产物，Xcode 会重新生成（第一次编译会慢一些）。"
+      },
+      "official_cmd": {
+        "en": "xcodebuild clean, or delete the folder",
+        "zh": "xcodebuild clean，或直接删除该目录"
+      },
       "default_clean": true
+    },
+    {
+      "id": "xcode-device-support",
+      "category": "build-artifacts",
+      "tool": "Xcode",
+      "name": {
+        "en": "Xcode iOS/watchOS DeviceSupport",
+        "zh": "Xcode iOS/watchOS DeviceSupport"
+      },
+      "risk": "low",
+      "paths": [
+        "~/Library/Developer/Xcode/iOS DeviceSupport",
+        "~/Library/Developer/Xcode/watchOS DeviceSupport"
+      ],
+      "min_size_mb": 200,
+      "why": {
+        "en": "Debug symbols per iOS version and device; re-generated the next time you debug that device.",
+        "zh": "按 iOS 版本/设备缓存的调试符号，下次调试对应设备时会重新生成。"
+      },
+      "official_cmd": {
+        "en": "delete the folder in Xcode → Settings → Platforms / Devices",
+        "zh": "在 Xcode → Settings → Platforms/Devices 里删除，或手动删目录"
+      },
+      "default_clean": true
+    },
+    {
+      "id": "xcode-archives",
+      "category": "build-artifacts",
+      "tool": "Xcode",
+      "name": {
+        "en": "Xcode Archives (your shipped builds)",
+        "zh": "Xcode Archives（你打包发布的历史版本）"
+      },
+      "risk": "medium",
+      "paths": ["~/Library/Developer/Xcode/Archives"],
+      "min_size_mb": 200,
+      "why": {
+        "en": "Archives are the .xcarchive bundles you uploaded to App Store Connect. Re-downloading them is not possible — check in Xcode Organizer before deleting.",
+        "zh": "Archives 是你上传 App Store Connect 时的打包产物，删了无法重新下载——删之前先在 Xcode Organizer 里确认是否还需要。"
+      },
+      "official_cmd": {
+        "en": "manage in Xcode → Window → Organizer",
+        "zh": "在 Xcode → Window → Organizer 里管理"
+      },
+      "default_clean": false
+    },
+    {
+      "id": "wechat-storage",
+      "category": "app-caches",
+      "tool": "WeChat",
+      "name": {
+        "en": "WeChat storage (display only)",
+        "zh": "微信存储占用（仅展示）"
+      },
+      "risk": "medium",
+      "paths": ["~/Library/Containers/com.tencent.xinWeChat"],
+      "min_size_mb": 2000,
+      "why": {
+        "en": "Chat history, received files and media — usually the single biggest folder on a work Mac. It contains messages you may need, so clean it inside WeChat, not with a file tool.",
+        "zh": "聊天记录、收到的文件与图片视频——往往是工作 Mac 上最大的一个目录。里面有聊天记录，请在微信内清理，不要用文件工具动。"
+      },
+      "official_cmd": {
+        "en": "WeChat → Settings → General → Storage → Manage",
+        "zh": "微信 → 设置 → 通用 → 存储空间 → 管理"
+      },
+      "default_clean": false,
+      "show_only": true
     },
     {
       "id": "jianying-cache",
       "category": "app-caches",
-      "tool": "剪映专业版",
-      "name": "剪映素材缓存",
+      "tool": "CapCut / JianyingPro",
+      "name": {
+        "en": "CapCut (剪映) media cache",
+        "zh": "剪映素材缓存"
+      },
       "risk": "low",
-      "paths": ["~/Movies/JianyingPro/User Data/Cache"],
-      "min_size_mb": 200,
-      "why": "剪映预览/素材缓存；草稿在 Projects 目录不受影响",
-      "official_cmd": "剪映设置内清理",
+      "paths": ["~/Movies/JianyingPro/User Data/Cache", "~/Movies/JianyingPro/User Data/LVOPTmp"],
+      "min_size_mb": 100,
+      "why": {
+        "en": "Preview and material cache. Your drafts live in User Data/Projects and are never touched.",
+        "zh": "预览与素材缓存。你的草稿在 User Data/Projects，绝不触碰。"
+      },
+      "official_cmd": {
+        "en": "clean inside CapCut settings",
+        "zh": "剪映设置内清理"
+      },
       "default_clean": true
-    },
-    {
-      "id": "trash",
-      "category": "general",
-      "tool": "系统",
-      "name": "废纸篓",
-      "risk": "medium",
-      "paths": ["~/.Trash"],
-      "min_size_mb": 50,
-      "why": "废纸篓内容已是你主动删除过的，清空可回收；注意不可恢复",
-      "official_cmd": "清倒废纸篓",
-      "default_clean": false
     }
   ]
 }

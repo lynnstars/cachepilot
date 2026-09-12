@@ -1,103 +1,126 @@
 # CachePilot
 
-**A macOS disk cleaner built for AI engineers & tinkerers.**
+**A macOS disk reclaimer for people who install a lot of AI/dev tooling.**
 
-> **Status: v0.3 alpha** — ad-hoc signed test build. Not notarized yet (no paid Apple Developer account). Works, but expect rough edges.
+> **Status: v0.4.0 alpha** — ad-hoc signed test build, not notarized (no paid Apple Developer account yet).
 
-The problem: if you install AI tooling and dependencies from the terminal — `npm`, `pip`, `uv`, Homebrew, `conda`, `cargo`, Docker, `ollama`, HuggingFace models, Xcode — your disk fills up with **dependency caches and model residue**, not app caches. Classic cleaners (CleanMyMac-style, "app cache" mindset) don't understand package-manager semantics and are afraid to touch conda/ollama/Docker. So your disk hits 99% and the "cleaners" can't help.
+Your disk fills up with **dependency caches and model residue** — npm/pip/uv/Homebrew/conda/Gradle, plus ollama models, HuggingFace downloads, Docker images, build artifacts. `CleanMyMac`-style tools don't understand package-manager semantics and won't go near conda/ollama/Docker. So the disk hits 99% and nothing can help.
 
-CachePilot scans exactly what AI engineers accumulate, groups it by tool, shows you size / risk / *why it's safe to delete*, and cleans by **moving items to the Trash (recoverable)** — never a hard `rm`.
+CachePilot scans two things and puts them in **one numbered list you authorize**:
 
-## Features (v0.3)
+| | What it finds |
+|---|---|
+| **A · Cache rules** | npm (`_cacache`, `_npx`), pnpm store, Yarn, pip, uv, Homebrew, cargo, Go, Gradle, conda pkgs, ollama models¹, HuggingFace, ComfyUI, insightface, Playwright, camoufox, Xcode DerivedData/DeviceSupport/Archives, Docker Desktop, WeChat¹, CapCut/剪映 |
+| **B · Large files & redundancy** | files above a size threshold, **identical files** (SHA-256 verified, with head/tail fast path for huge files), and **redundant versions** (`X-最新(1)`, `X-无字幕`, `report-v2-final` … clustered by name) |
 
-- 🔍 Scans dependency caches and AI residue by tool:
-  | Category | Tools |
-  |---|---|
-  | Package managers | npm, pnpm, yarn, pip, uv, Homebrew, cargo, go, gradle, conda pkg cache |
-  | AI tools | ollama models (display-only), HuggingFace hub cache, ComfyUI temp |
-  | Browser automation | Playwright, camoufox browser engines |
-  | Build artifacts | Xcode DerivedData |
-  | App caches (whitelist) | 剪映/CapCut-style editor caches |
-- 🎯 Every item shows: **size, risk level, why it's safe to delete, and the official CLI command** that does the same
-- 🗑️ Cleaning = **move to Trash** (recoverable), never permanent delete
-- 🚦 Risk model: 🟢 low-risk pre-checked · 🟡 medium opt-in · 🔴 high/`show-only` items (e.g. large local models, node_modules inventory) are **never** one-click deletable
-- ⚙️ Rule-driven: `rules/cleanable_rules.json` defines everything — easy to audit, easy to extend
+¹ display-only: shown so you know where the space went, with the official command to clean it properly.
 
-## Why trust it?
+## How cleaning works (two stages — read this)
 
-1. **Cache-only, whitelisted paths** — it never touches documents, chat history, project source, or model files (models are displayed, not auto-deleted)
-2. **Trash, not `rm`** — everything it cleans can be restored from the Trash
-3. **Transparent** — every item explains *what it is, why it's safe, and the official command*
-4. **No telemetry, no network calls** — the app scans locally and does nothing else
+```
+scan → numbered list → you pick numbers → stage  →  release
+                                          │          │
+                              move to Trash          permanently delete
+                              (fully recoverable)    (irreversible, frees space)
+```
+
+1. **Stage** moves the selected items to the Trash. They are recoverable (`cachepilot undo`), **and the disk space is not freed yet** — CachePilot says so explicitly.
+2. **Release** deletes the staged items for good and actually reclaims the space. It requires an explicit confirmation (`--confirm-irreversible` in the CLI, a red button in the GUI).
+3. Every stage writes a **manifest** (`~/Library/Application Support/CachePilot/manifests/`): original path, staged path, size, timestamps. That is what `undo` uses, and it is why you can always see what was touched.
+
+Nothing is ever deleted without you naming its number. Trash-first is not "extra safety" — it is the only reason moving 11 GB is safe to do at 90% disk usage.
+
+## Refused by design
+
+CachePilot refuses to act on, and never scans into:
+
+- system paths (`/System`, `/Library`, `/Applications`, `/usr`, `/bin`, `/sbin`, `/etc`, `/var`, `/private`, `/volumes`, `/opt`)
+- private data (`~/.ssh`, `~/.gnupg`, `~/Library/Keychains`, `Messages`, `Safari`, `AddressBook`)
+- **the Trash folder itself** (v0.3 tried to move the Trash into the Trash — a guaranteed failure; the guard plus a regression test prevents it coming back)
+- symlinks, paths outside the allowed roots, and non-existent paths
+- display-only items (models, Docker image, WeChat storage)
 
 ## Install (test build)
 
-1. Download `CachePilot-v0.3-test.zip` from [Releases](../../releases)
+1. Download `CachePilot-v0.4.0-test.zip` from [Releases](../../releases)
 2. Unzip, move `CachePilot.app` to Applications
-3. First launch: **right-click → Open** (it's ad-hoc signed, not notarized — Gatekeeper will warn; that's expected until we get a Developer ID cert)
-   - If blocked: `xattr -dr com.apple.quarantine /Applications/CachePilot.app`
+3. First launch: **right-click → Open** (ad-hoc signed, not notarized — Gatekeeper warns; expected)
+   - Still blocked: `xattr -dr com.apple.quarantine /Applications/CachePilot.app`
 
-## Usage
-
-1. Click **Scan** — reads the rule library and measures real sizes on your machine (read-only)
-2. Review grouped results (category → item → size / risk / reason / official command)
-3. Check what you want (green = pre-checked)
-4. Click **Move to Trash (recoverable)** → confirm → done. Space updates live.
-
-## Development
-
-Requirements: macOS 14+, Xcode **Command Line Tools** only (no full Xcode needed — `swiftc` + bundled SDK compiles the SwiftUI app).
+## CLI
 
 ```bash
-# Build the .app bundle
-app/scripts/make-app.sh
+bash app/scripts/build-cli.sh          # → app/build/bin/cachepilot
 
-# CLI scanner (same logic, Python)
-python3 scanner/scan.py          # read-only preview
-python3 scanner/scan.py --json   # machine-readable
+cachepilot plan                        # numbered report: cache rules + large files + duplicates
+cachepilot plan --mode cache --min-size 500MB --root ~/Downloads
+cachepilot stage --select 1,3-5         # moves those numbers to the Trash (recoverable)
+cachepilot release --confirm-irreversible   # actually frees the space
+cachepilot undo                        # put the last staged batch back
+cachepilot manifests                   # what was staged / released / undone
+cachepilot doctor                      # language, paths, rule library, pending staged bytes
 ```
 
-```
-app/                    # SwiftUI app source (no Xcode project — swiftc based)
-rules/cleanable_rules.json      # rule library (single source of truth)
-scanner/scan.py                 # CLI scanner
-prototype/                      # HTML interaction prototype & clean lists
-TEST_CASES.md                   # test cases
-```
+`--select` numbers refer to the plan that was just printed (saved to `plans/latest.json`); plans older than 60 minutes are refused, so numbering can never be stale.
 
-## Extending the rule library
+## Language
 
-Add an entry to `rules/cleanable_rules.json`:
+The interface follows the **system language**: any `zh*` language → Chinese; **every other language → English**. Override with `--lang zh|en` (CLI) or `CACHEPILOT_LANG` (both), or the globe menu in the GUI. Rule text is bilingual inside the rule library itself (`{"en": …, "zh": …}`).
+
+## Rule library
+
+`rules/cleanable_rules.json` (schema v2) is the single source of truth — bilingual strings, risk level, paths, `min_size_mb`, why-it's-safe, official command, `default_clean` / `show_only`.
 
 ```json
 {
   "id": "my-tool-cache",
   "category": "package-manager",
   "tool": "my-tool",
-  "name": "my-tool download cache",
+  "name": { "en": "my-tool download cache", "zh": "my-tool 下载缓存" },
   "risk": "low",
   "paths": ["~/.my-tool/cache"],
   "min_size_mb": 50,
-  "why": "Cache of downloaded packages; re-downloaded on next use",
-  "official_cmd": "my-tool cache clean",
+  "why": { "en": "re-downloaded on next use", "zh": "下次使用时重新下载" },
+  "official_cmd": { "en": "my-tool cache clean", "zh": "my-tool cache clean" },
   "default_clean": true
 }
 ```
 
-Categories: `package-manager` · `ai-tools` · `browser-automation` · `build-artifacts` · `app-caches` · `general`
+Load order: app bundle → `CACHEPILOT_RULES` → next to the binary → `~/Library/Application Support/CachePilot/rules/` (hot-swap rules without rebuilding) → repo `rules/` in development.
 
-## Roadmap
+## Development
 
-- [x] Rule library v1 + read-only scanner
-- [x] SwiftUI app: scan → group → check → move to Trash
-- [x] Ad-hoc test distribution
+Requirements: macOS 14+, Xcode **Command Line Tools** only (no full Xcode — `swiftc` + the SDK builds the SwiftUI app).
+
+```bash
+bash app/scripts/make-app.sh      # build CachePilot.app (ad-hoc signed, sealed Info.plist)
+bash app/scripts/build-cli.sh     # build the cachepilot CLI (same engine)
+bash scripts/run-tests.sh         # Swift unit tests + CLI end-to-end + Python tests
+```
+
+```
+app/Sources/CachePilot/   core: L10n, Models, Finder (scanner/detectors), Actions, Engine, CLI
+app/Sources/CachePilot/   GUI: CachePilotApp.swift, ContentView.swift
+app/Sources/CLI/          CLI entry point (shares the core)
+app/Tests/                Swift test suite
+app/scripts/              build scripts
+rules/                    bilingual rule library (schema v2)
+scanner/scan.py           legacy read-only preview (still works, cannot clean anything)
+scripts/run-tests.sh      full test suite
+.github/workflows/        CI (tests on push) + release workflow (build + attach zip on tag)
+```
+
+The Swift core is the single engine: the app and the CLI call exactly the same code, so what you test in CI is what you run.
+
+## Roadmap (not done yet — no silent promises)
+
 - [ ] Developer ID signing + notarization (official distribution)
-- [ ] GitHub Actions CI (build on tag)
-- [ ] Rule cloud updates (Pro) / scheduled scans
-- [ ] Mac App Store (sandbox-limited) evaluation
+- [ ] App icon
+- [ ] node_modules / venv inventory (directory-level scan; today only large individual files are listed)
+- [ ] Docker prune integration (`docker system prune` invocation + shrink the disk image) — currently display-only
+- [ ] Rule cloud updates (Pro) / scheduled background scans
+- [ ] Mac App Store evaluation (sandboxing limits arbitrary cache access)
 
-## Disclaimer
+## License
 
-This tool deletes/moves files based on its rule library. It's designed to be conservative (Trash-first, display-only for models), but **always review scan results before cleaning** — you are responsible for your own machine. Test builds are unsigned/not notarized; install at your own risk.
-
-License: not yet chosen — all rights reserved until further notice.
+Not chosen yet — all rights reserved until further notice.

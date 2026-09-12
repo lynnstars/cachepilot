@@ -1,0 +1,45 @@
+name: Release
+
+# 打 tag（如 v0.4.0）即自动：跑测试 → 构建 .app → 打 zip → 创建/更新 Release 资产
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Full test suite
+        run: bash scripts/run-tests.sh
+
+      - name: Build app + CLI
+        run: |
+          bash app/scripts/make-app.sh
+          bash app/scripts/build-cli.sh
+
+      - name: Package
+        run: |
+          TAG="${GITHUB_REF_NAME:-manual}"
+          mkdir -p dist
+          # ditto 保留签名与 bundle 结构（zip -r 会破坏 CodeResources）
+          ditto -c -k --sequesterRsrc --keepParent app/build/CachePilot.app "dist/CachePilot-${TAG}-test.zip"
+          ditto -c -k --sequesterRsrc app/build/bin/cachepilot "dist/cachepilot-cli-${TAG}.zip"
+          shasum -a 256 dist/*.zip | tee dist/SHA256SUMS.txt
+          ls -l dist
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF_NAME:-manual-${{ github.run_number }}}"
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --title "CachePilot $TAG" \
+              --notes "Automated build from $(git rev-parse --short HEAD). See CHANGELOG.md for details. Ad-hoc signed (not notarized): first launch = right-click → Open."
+          gh release upload "$TAG" dist/*.zip dist/SHA256SUMS.txt --clobber
+          gh release view "$TAG" --json assets -q '.assets[].name'

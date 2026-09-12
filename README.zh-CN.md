@@ -1,103 +1,99 @@
-# CachePilot（暂定名）
+# CachePilot
 
-**面向 AI 工程师/爱好者的 macOS 磁盘清理工具。**
+**面向「装了一堆 AI/开发工具」的 macOS 磁盘瘦身工具。**
 
-> **状态：v0.3 alpha** — ad-hoc 签名内测版，尚未公证（暂无付费 Apple 开发者账号）。功能可用，但仍是早期版本。
+> **状态：v0.4.0 alpha** —— ad-hoc 签名的测试版，尚未公证（没有付费 Apple 开发者账号）。
 
-痛点：装了 npm/pip/uv/Homebrew/conda/ollama/Docker 等一堆终端设施后，磁盘被**依赖包缓存和 AI 模型残留**占满——而传统清理工具（CleanMyMac 式"按 app 缓存分类"）清不干净、不懂依赖包语义、不敢动 conda/ollama/Docker。于是磁盘到 99% 时，"清理工具"反而帮不上忙。
+磁盘被**依赖包缓存与模型残留**占满：npm/pip/uv/Homebrew/conda/Gradle，加上 ollama 模型、HuggingFace 下载、Docker 镜像、构建产物。CleanMyMac 式的工具不懂包管理器语义，也不敢动 conda/ollama/Docker，于是磁盘到 99% 时谁都帮不上忙。
 
-CachePilot 专扫 AI 工程师会积累的东西，按工具分组展示 **大小 / 风险 / 为什么可删**，清理 = **移入废纸篓（可恢复）**，绝不硬删。
+CachePilot 扫两件事，合成**一份你可以按编号授权的清单**：
 
-## 功能（v0.3）
+| | 扫什么 |
+|---|---|
+| **A · 缓存规则** | npm（`_cacache`、`_npx`）、pnpm store、Yarn、pip、uv、Homebrew、cargo、Go、Gradle、conda 包缓存、ollama 模型¹、HuggingFace、ComfyUI、insightface、Playwright、camoufox、Xcode DerivedData/DeviceSupport/Archives、Docker Desktop、微信¹、剪映 |
+| **B · 大文件与冗余** | 超过阈值的大文件；**内容完全相同的重复文件**（SHA-256 校验，超大文件走首尾哈希快通道）；**疑似冗余版本**（`X-最新(1)`、`X-无字幕`、`report-v2-final` 按名称聚类） |
 
-- 🔍 按工具扫描依赖缓存与 AI 残留：
-  | 类别 | 工具 |
-  |---|---|
-  | 包管理器 | npm、pnpm、yarn、pip、uv、Homebrew、cargo、go、gradle、conda pkg 缓存 |
-  | AI 工具 | ollama 模型（仅展示）、HuggingFace hub 缓存、ComfyUI 临时文件 |
-  | 浏览器自动化 | Playwright、camoufox 浏览器引擎 |
-  | 构建产物 | Xcode DerivedData |
-  | 应用缓存(白名单) | 剪映类剪辑软件素材缓存 |
-- 🎯 每项标注：**大小、风险等级、为什么可删、对应的官方命令**
-- 🗑️ 清理 = **移入废纸篓**（可恢复），不是永久删除
-- 🚦 风险模型：🟢 低风险默认勾选 · 🟡 中风险手动勾 · 🔴 高/仅展示项（大模型、node_modules 清单等）**绝不提供一键删除**
-- ⚙️ 规则库驱动：`rules/cleanable_rules.json` 定义一切——易审计、易扩展
+¹ 仅展示：让你知道空间去哪了，并给出正确的官方清理命令。
 
-## 为什么可信
+## 清理机制（两段式，请先读这段）
 
-1. **只清白名单缓存路径**——不碰文档、聊天记录、项目源码、模型文件（模型只展示不自动删）
-2. **移废纸篓而非 rm**——清掉的东西都能从废纸篓恢复
-3. **透明**——每项都写清"是什么、为什么可删、官方命令"
-4. **无遥测、无网络请求**——纯本地扫描
+```
+扫描 → 编号清单 → 你挑编号 → 暂存(stage) → 彻底释放(release)
+                             │                │
+                        移入废纸篓          永久删除
+                        （完全可恢复）      （不可恢复，真正释放空间）
+```
 
-## 安装（内测版）
+1. **stage 暂存**：把选中项移入废纸篓。可恢复（`cachepilot undo`），但**此时磁盘空间并没有释放**——CachePilot 会明确告诉你这一点（v0.3 在这里骗过用户）。
+2. **release 彻底释放**：永久删除暂存项，真正回收空间。必须显式确认（CLI 要 `--confirm-irreversible`，GUI 是红色按钮）。
+3. 每次暂存都会写**记录（manifest）**到 `~/Library/Application Support/CachePilot/manifests/`：原路径、废纸篓路径、大小、时间。`undo` 靠它工作，也让你任何时候都能查清「到底动了什么」。
 
-1. 从 [Releases](../../releases) 下载 `CachePilot-v0.3-test.zip`
+不点名编号，什么都不会被删。先入废纸篓不是「额外保险」，而是「磁盘 90% 满时也敢移动 11GB」的唯一前提。
+
+## 默认拒绝的路径
+
+CachePilot 不扫描、也不允许操作：
+
+- 系统路径（`/System`、`/Library`、`/Applications`、`/usr`、`/bin`、`/sbin`、`/etc`、`/var`、`/private`、`/Volumes`、`/opt`）
+- 隐私目录（`~/.ssh`、`~/.gnupg`、`~/Library/Keychains`、`Messages`、`Safari`、`AddressBook`）
+- **废纸篓本身**（v0.3 会把废纸篓移进废纸篓，必然失败；现在有护栏 + 回归测试）
+- 符号链接、允许根目录之外的路径、不存在的路径
+- 仅展示项（模型、Docker 映像、微信存储）
+
+## 安装（测试版）
+
+1. 从 [Releases](../../releases) 下载 `CachePilot-v0.4.0-test.zip`
 2. 解压，把 `CachePilot.app` 拖进「应用程序」
-3. 首次打开：**右键 → 打开**（ad-hoc 签名未公证，Gatekeeper 会提示——属正常，等拿到 Developer ID 证书后消除）
-   - 打不开就执行：`xattr -dr com.apple.quarantine /Applications/CachePilot.app`
+3. 首次打开：**右键 → 打开**（ad-hoc 签名、未公证，Gatekeeper 会警告，属正常）
+   - 仍被拦：`xattr -dr com.apple.quarantine /Applications/CachePilot.app`
 
-## 使用
+## 命令行
 
-1. 点「扫描」——读规则库，实测本机各路径大小（只读）
-2. 查看分组结果（类别 → 条目 → 大小 / 风险 / 原因 / 官方命令）
-3. 勾选要清的项（🟢 默认已勾）
-4. 点「移入废纸篓（可恢复）」→ 确认 → 完成，可用空间实时更新
+```bash
+bash app/scripts/build-cli.sh          # → app/build/bin/cachepilot
+
+cachepilot plan                        # 编号报告：缓存规则 + 大文件 + 重复文件
+cachepilot plan --mode cache --min-size 500MB --root ~/Downloads
+cachepilot stage --select 1,3-5         # 把这几号移入废纸篓（可恢复）
+cachepilot release --confirm-irreversible   # 彻底释放，真正腾出空间
+cachepilot undo                        # 把上批暂存的还原
+cachepilot manifests                   # 已暂存 / 已释放 / 已撤销
+cachepilot doctor                      # 语言、路径、规则库、待释放体积
+```
+
+`--select` 的编号对应刚打印的那份清单（自动存到 `plans/latest.json`）。超过 60 分钟的清单会被拒绝，编号永远不会错位。
+
+## 语言
+
+界面**跟随系统语言**：`zh*` 一律中文；**其他任何语言一律英文**。可用 `--lang zh|en`（CLI）、`CACHEPILOT_LANG`（两者）或界面右上角的地球菜单覆盖。规则库里的文案本身就是双语的（`{"en": …, "zh": …}`）。
+
+## 规则库
+
+`rules/cleanable_rules.json`（schema v2）是唯一事实来源：双语文案、风险等级、路径、`min_size_mb`、为什么可删、官方命令、`default_clean` / `show_only`。
+
+加载顺序：App bundle → `CACHEPILOT_RULES` → 可执行文件同级 → `~/Library/Application Support/CachePilot/rules/`（不改代码热更新规则）→ 开发时的仓库 `rules/`。
 
 ## 开发
 
-环境要求：macOS 14+，只需 Xcode **Command Line Tools**（不需要完整 Xcode——`swiftc` + 内置 SDK 即可编译 SwiftUI app）。
+要求：macOS 14+，只需 Xcode **Command Line Tools**（不需要完整 Xcode，`swiftc` + SDK 就能编译 SwiftUI app）。
 
 ```bash
-# 打包 .app
-app/scripts/make-app.sh
-
-# CLI 扫描器（同一套逻辑，Python）
-python3 scanner/scan.py          # 只读预览
-python3 scanner/scan.py --json   # 机器可读
+bash app/scripts/make-app.sh      # 打包 CachePilot.app（ad-hoc 签名，Info.plist 一起 sealed）
+bash app/scripts/build-cli.sh     # 编译 cachepilot CLI（同一内核）
+bash scripts/run-tests.sh         # Swift 单测 + CLI 端到端 + Python 测试
 ```
 
-```
-app/                    # SwiftUI app 源码（无 Xcode 工程，swiftc 直编）
-rules/cleanable_rules.json      # 规则库（唯一事实源）
-scanner/scan.py                 # CLI 扫描器
-prototype/                      # HTML 交互原型 & 清理清单
-TEST_CASES.md                   # 测试案例
-```
+Swift 内核是唯一引擎：App 与 CLI 调用完全相同的代码，所以 CI 里测的就是你实际在跑的。
 
-## 扩展规则库
+## 路线图（还没做，不吹）
 
-在 `rules/cleanable_rules.json` 加一条：
-
-```json
-{
-  "id": "my-tool-cache",
-  "category": "package-manager",
-  "tool": "my-tool",
-  "name": "my-tool download cache",
-  "risk": "low",
-  "paths": ["~/.my-tool/cache"],
-  "min_size_mb": 50,
-  "why": "Cache of downloaded packages; re-downloaded on next use",
-  "official_cmd": "my-tool cache clean",
-  "default_clean": true
-}
-```
-
-类别：`package-manager` · `ai-tools` · `browser-automation` · `build-artifacts` · `app-caches` · `general`
-
-## 路线图
-
-- [x] 规则库 v1 + 只读扫描器
-- [x] SwiftUI app：扫描 → 分组 → 勾选 → 移废纸篓
-- [x] ad-hoc 内测分发
 - [ ] Developer ID 签名 + 公证（正式分发）
-- [ ] GitHub Actions CI（打 tag 自动构建）
-- [ ] 规则云更新（Pro）/ 定时扫描
-- [ ] Mac App Store（沙盒受限版）评估
+- [ ] App 图标
+- [ ] node_modules / venv 清单（目录级扫描；目前只列大文件）
+- [ ] Docker prune 集成（调用 `docker system prune` + 收缩磁盘映像）——目前仅展示
+- [ ] 规则云更新（Pro）/ 定时后台扫描
+- [ ] Mac App Store 可行性评估（沙箱限制任意缓存访问）
 
-## 免责声明
+## 许可
 
-本工具按规则库删除/移动文件。设计上偏保守（先进废纸篓、模型仅展示），但**清理前请务必检查扫描结果**——请对你自己机器的操作负责。内测版未签名/未公证，自行承担安装风险。
-
-License：暂未选择，保留所有权利。
+尚未选定 —— 保留所有权利。

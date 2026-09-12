@@ -1,55 +1,107 @@
 #!/usr/bin/env python3
-"""CachePilot scanner — 只读扫描预览，绝不删除任何文件。
-用法: python3 scanner/scan.py [--json]
-输出: 按类别分组的可清理候选清单 + 风险/建议/说明
+"""CachePilot 只读预览扫描器（scanner/scan.py）。
+
+v0.4 起：真正的清理动作由 Swift 内核的 `cachepilot` CLI 负责（带清单、编号授权、
+暂存/撤销/彻底释放与安全护栏）。本脚本保留为**只读预览**——它不会、也不能移动任何文件。
+
+语言：默认跟随系统语言（zh* → 中文，其他语言 → 英文），可用 --lang zh|en 覆盖。
+用法:
+  python3 scanner/scan.py [--json] [--lang zh|en] [--rules PATH]
 """
 import argparse
 import json
 import os
-import shutil
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent
-RULES_FILE = BASE / "rules" / "cleanable_rules.json"
+DEFAULT_RULES = BASE / "rules" / "cleanable_rules.json"
 HOME = Path.home()
 
 CAT_DISPLAY = {
-    "package-manager": "📦 包管理器缓存",
-    "ai-tools": "🤖 AI 工具残留",
-    "browser-automation": "🌐 浏览器自动化",
-    "build-artifacts": "🔨 工程构建产物",
-    "app-caches": "🎬 应用缓存(白名单)",
-    "general": "🧹 通用清理",
+    "package-manager": {"en": "Package manager caches", "zh": "包管理器缓存"},
+    "ai-tools": {"en": "AI tool residue", "zh": "AI 工具残留"},
+    "containers": {"en": "Containers & virtualization", "zh": "容器与虚拟化"},
+    "browser-automation": {"en": "Browser automation", "zh": "浏览器自动化"},
+    "build-artifacts": {"en": "Build artifacts", "zh": "工程构建产物"},
+    "app-caches": {"en": "App caches (whitelisted)", "zh": "应用缓存（白名单）"},
+    "general": {"en": "General", "zh": "通用"},
 }
-RISK = {"low": "🟢 低", "medium": "🟡 中", "high": "🔴 高"}
+
+TEXT = {
+    "header": {
+        "en": "CachePilot read-only preview — no file is ever moved or deleted here",
+        "zh": "CachePilot 只读预览 —— 不会移动或删除任何文件",
+    },
+    "totals": {"en": "Reclaimable total: %s (suggested: %s)",
+               "zh": "可回收合计：%s（建议项：%s）"},
+    "readonly": {"en": "Read-only scan. Cleaning is done by the `cachepilot` CLI (numbered authorization, Trash-first, undoable).",
+                 "zh": "本次为只读扫描。真正的清理请用 `cachepilot` CLI（按编号授权、先入废纸篓、可撤销）。"},
+    "noitems": {"en": "Nothing found above the current thresholds.",
+                "zh": "当前阈值下没有扫描到可清理项。"},
+    "why": {"en": "why safe: %s", "zh": "为什么可删：%s"},
+    "cmd": {"en": "official command: %s", "zh": "官方命令：%s"},
+    "cleaning_refused": {"en": "This preview script does not clean anything. Use `cachepilot stage --select 1,3-5` (Swift CLI).",
+                         "zh": "本预览脚本不执行清理。请用 `cachepilot stage --select 1,3-5`（Swift CLI）。"},
+    "suggested": {"en": "suggested", "zh": "建议清"},
+    "optional": {"en": "optional", "zh": "看情况"},
+    "showonly": {"en": "display only", "zh": "仅展示"},
+}
+
+RISK = {"low": {"en": "low", "zh": "低"}, "medium": {"en": "medium", "zh": "中"}, "high": {"en": "high", "zh": "高"}}
+
+
+def resolve_lang(cli_lang=None):
+    """zh* → 中文；其他任何语言 → 英文（与 App/CLI 的规则一致）。"""
+    for candidate in (cli_lang, os.environ.get("CACHEPILOT_LANG")):
+        if candidate:
+            return "zh" if candidate.lower().startswith("zh") else "en"
+    for env_name in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        v = os.environ.get(env_name, "")
+        if v:
+            low = v.lower()
+            if low.startswith("zh"):
+                return "zh"
+            # 其他显式设置的区域（如 ja_JP.UTF-8 / de_DE）→ 英文
+            return "en"
+    return "en"
+
+
+def t(key, lang, *args):
+    s = TEXT[key][lang]
+    return s % args if args else s
+
+
+def localized(value, lang):
+    """规则里的 {en, zh} 或纯字符串"""
+    if isinstance(value, dict):
+        return value.get(lang) or value.get("en") or ""
+    return value or ""
 
 
 def expand(p: str) -> Path:
-    p = p.replace("~", str(HOME))
-    return Path(p)
+    return Path(p.replace("~", str(HOME)))
 
 
 def du_kb(path: Path) -> int:
-    """du -sk 返回 KB；路径不存在返回 0"""
     if not path.exists():
         return 0
     try:
-        out = subprocess.run(
-            ["du", "-sk", str(path)],
-            capture_output=True, text=True, timeout=120,
-        ).stdout
+        out = subprocess.run(["du", "-sk", str(path)], capture_output=True, text=True, timeout=120).stdout
         return int(out.split("\t")[0]) if out.strip() else 0
     except Exception:
         return 0
 
 
-def scan() -> dict:
-    rules = json.loads(RULES_FILE.read_text())["rules"]
+def load_rules(path: Path):
+    return json.loads(path.read_text())
+
+
+def scan(rules_path: Path, lang: str) -> dict:
+    doc = load_rules(rules_path)
     results = []
-    for r in rules:
+    for r in doc.get("rules", []):
         total_kb = 0
         found = []
         for raw in r.get("paths", []):
@@ -59,104 +111,86 @@ def scan() -> dict:
                 found.append({"path": str(p), "kb": kb})
                 total_kb += kb
         min_mb = r.get("min_size_mb", 50)
-        if total_kb >= min_mb * 1024:
-            results.append({
-                "id": r["id"],
-                "tool": r["tool"],
-                "name": r["name"],
-                "category": r["category"],
-                "risk": r["risk"],
-                "kb": total_kb,
-                "found": found,
-                "why": r.get("why", ""),
-                "official_cmd": r.get("official_cmd", ""),
-                "default_clean": r.get("default_clean", True),
-                "show_only": r.get("show_only", False),
-            })
-    results.sort(key=lambda x: -x["kb"])
-    return {"results": results}
-
-
-def trash_paths(paths):
-    """把路径移入 ~/.Trash（等价 Finder 移到废纸篓，可手动恢复）。
-    仅用于 low 风险白名单项；冲突名自动加时间戳。"""
-    moved = []
-    trash = Path.home() / ".Trash"
-    trash.mkdir(exist_ok=True)
-    stamp = time.strftime("%Y%m%d-%H%M%S")
-    for raw in paths:
-        p = expand(raw)
-        if not p.exists():
+        if total_kb < min_mb * 1024 or not found:
             continue
-        dest = trash / f"{p.name}-CachePilot-{stamp}"
-        try:
-            shutil.move(str(p), str(dest))
-            moved.append((str(p), str(dest)))
-        except Exception as e:
-            print(f"  移动失败 {p}: {e}")
-    return moved
+        results.append({
+            "id": r["id"],
+            "tool": r["tool"],
+            "name": localized(r.get("name"), lang),
+            "category": r.get("category"),
+            "risk": r.get("risk"),
+            "kb": total_kb,
+            "found": found,
+            "why": localized(r.get("why"), lang),
+            "official_cmd": localized(r.get("official_cmd"), lang),
+            "default_clean": r.get("default_clean", True),
+            "show_only": r.get("show_only", False),
+        })
+    results.sort(key=lambda x: -x["kb"])
+    return {"schema_version": doc.get("schema_version", 1), "lang": lang, "results": results}
+
+
+def fmt(kb: float) -> str:
+    return f"{kb / 1048576:,.2f} GB"
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--lang", choices=["zh", "en"], help="覆盖语言（默认跟随系统语言）")
+    ap.add_argument("--rules", default=str(DEFAULT_RULES))
     ap.add_argument("--trash", action="store_true",
-                    help="对『low 风险 & 默认建议清』的项执行移入废纸篓（默认 dry-run 不删）")
-    ap.add_argument("--ids", nargs="*", help="仅处理指定规则 id（配合 --trash）")
+                    help="已废弃：本脚本不再执行任何清理（只读预览）")
     args = ap.parse_args()
 
-    data = scan()
+    lang = resolve_lang(args.lang)
+    if args.trash:
+        print(t("cleaning_refused", lang))
+        return 2
+
+    data = scan(Path(args.rules), lang)
     if args.json:
         print(json.dumps(data, ensure_ascii=False, indent=1))
-        return
-
-    if args.trash:
-        eligible = [it for it in data["results"]
-                    if it["risk"] == "low" and it["default_clean"] and not it.get("show_only")]
-        if args.ids:
-            eligible = [it for it in eligible if it["id"] in args.ids]
-        if not eligible:
-            print("没有符合条件的可执行项（需要 low 风险 + 默认建议清）。")
-        else:
-            print("== 执行移入废纸篓（可恢复）==")
-            for it in eligible:
-                gb = it["kb"] / 1048576
-                moved = trash_paths([f["path"] for f in it["found"]])
-                print(f"  {'✓' if moved else '-'} {it['name']} ({gb:,.2f} GB) -> ~/.Trash")
-        print("重新扫描，显示剩余可清理项：\n")
-        data = scan()
+        return 0
 
     by_cat = {}
     for it in data["results"]:
         by_cat.setdefault(it["category"], []).append(it)
 
     total = 0
-    print("=" * 72)
-    print("CachePilot 只读扫描预览 — 不删除任何文件")
-    print("=" * 72)
+    suggested = 0
+    line = "=" * 72
+    print(line)
+    print(t("header", lang))
+    print(line)
+    if not data["results"]:
+        print(t("noitems", lang))
     for cat in sorted(by_cat, key=lambda c: -sum(i["kb"] for i in by_cat[c])):
         items = by_cat[cat]
         cat_sum = sum(i["kb"] for i in items)
         total += cat_sum
-        print(f"\n{'-'*72}\n{CAT_DISPLAY.get(cat, cat)}  合计 {cat_sum/1048576:,.2f} GB ({len(items)} 项)")
-        print(f"{'-'*72}")
+        name = CAT_DISPLAY.get(cat, {}).get(lang, cat)
+        print(f"\n{'-'*72}\n{name}  ·  {fmt(cat_sum)}  ({len(items)})\n{'-'*72}")
         for it in items:
-            flag = "🔴 仅展示" if it.get("show_only") else ("🟢 建议清" if it["default_clean"] else "🟡 看情况")
-            gb = it["kb"] / 1048576
-            print(f"\n  [{flag}] {it['name']}  ——  {gb:,.2f} GB  风险{RISK[it['risk']]}")
+            if it["show_only"]:
+                flag = t("showonly", lang)
+            elif it["default_clean"]:
+                flag = t("suggested", lang)
+                suggested += it["kb"]
+            else:
+                flag = t("optional", lang)
+            print(f"\n  [{flag}] {it['name']}  ——  {fmt(it['kb'])}  ({RISK.get(it['risk'], {}).get(lang, it['risk'])})")
             for f in it["found"]:
-                print(f"        {f['path']}  ({f['kb']/1048576:,.2f} GB)")
-            print(f"        为什么可删: {it['why']}")
+                print(f"        {f['path']}  ({fmt(f['kb'])})")
+            print("        " + t("why", lang, it["why"]))
             if it["official_cmd"]:
-                print(f"        官方命令:   {it['official_cmd']}")
-    print(f"\n{'='*72}")
-    print(f"可识别可清理合计: {total/1048576:,.2f} GB（其中 🟢建议清 {sum(i['kb'] for c in by_cat for i in by_cat[c] if i['default_clean'] and not i.get('show_only'))/1048576:,.2f} GB）")
-    if args.trash:
-        print("上方为执行『移入废纸篓』后的剩余项。废纸篓内可手动恢复。")
-    else:
-        print("本次为只读扫描，未做任何删除。")
-    print("=" * 72)
+                print("        " + t("cmd", lang, it["official_cmd"]))
+    print(f"\n{line}")
+    print(t("totals", lang, fmt(total), fmt(suggested)))
+    print(t("readonly", lang))
+    print(line)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
